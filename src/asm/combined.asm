@@ -1,0 +1,7 @@
+%include "movegen.asm"
+%include "board.asm"
+%include "game.asm"
+%include "moveorder.asm"
+%include "search.asm"
+%include "uci.asm"
+%include "evaluate.asm"
