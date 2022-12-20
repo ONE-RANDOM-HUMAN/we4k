@@ -22,3 +22,6 @@ Score of we4k-a1d01ff vs 4ku-7b322bd: 10 - 87 - 3  [0.115] 100
 Elo difference: -354.5 +/- 112.5, LOS: 0.0 %, DrawRatio: 3.0 %
 Finished match
 ```
+
+### Where was there claimed to be only one zig function?
+After compilation, only one zig function remains after inlining and dead code elimination.
