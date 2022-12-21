@@ -25,3 +25,8 @@ Finished match
 
 ### Where was there claimed to be only one zig function?
 After compilation, only one zig function remains after inlining and dead code elimination.
+
+## Thanks
+we4k was developed with contributions from many others. In particular
+* The Stockfish Team - we4k was tuned using a large number Fishtest games.
+* sqrmax - for dedicating a large amount of time to reading the assembly and providing suggestions.

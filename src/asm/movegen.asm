@@ -73,15 +73,16 @@ gen_pseudo_legal_asm:
     and rdx, r8
 
     ; generalised shifts using rotates
-    mov rax, -4
+    lea rax, [r10 - 4] ; size savings thanks to @sqrmax
 .make_squares:
     mov r11, rdx
-    mov cl, byte [r10 + rax]
+    mov cl, byte [rax]
     rol r11, cl
     push r11
 
     inc rax
-    jnz .make_squares
+    cmp rax, r10
+    jne .make_squares
 
     ; mask the rotates
     vmovdqa xmm0, oword [rsp]
@@ -91,8 +92,7 @@ gen_pseudo_legal_asm:
     xor ecx, ecx
 
     ; en passant
-    ; rax is already zero
-    mov al, byte [rdi + Board.ep]
+    movzx eax, byte [rdi + Board.ep]
     cmp al, 64
     je .no_ep
 

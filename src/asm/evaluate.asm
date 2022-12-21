@@ -381,6 +381,7 @@ isolated_count:
 .loop_head:
     blsi rcx, rdi
     jz .end
+    xor rdi, rcx ; reset ls1b
 
     mov rdx, rcx
     shl rdx, 1
@@ -393,7 +394,6 @@ isolated_count:
     test rdx, rsi
     setz cl
     add eax, ecx
-    blsr rdi, rdi
     jmp .loop_head
 .end:
     ret

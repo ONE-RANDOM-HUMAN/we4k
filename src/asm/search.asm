@@ -18,8 +18,8 @@ MAX_EVAL equ 65535
 EVAL_PANIC_MARGIN equ 128
 
 CLONE_THREAD_SIGHAND_VM equ 0x00010900
-WAIT4_SYSCALL equ 61
 CLONE_SYSCALL equ 56
+MUNMAP_SYSCALL equ 11
 
 extern search_alpha_beta
 
@@ -166,7 +166,49 @@ search_begin_asm:
 %if EXTRA_THREAD_COUNT > 0
     mov r13d, EXTRA_THREAD_COUNT
 .thread_loop_head:
-    call search_create_thread
+    mov esi, THREAD_STACK_SIZE
+    call mmap
+
+    add rax, THREAD_STACK_SIZE - BOARD_LIST_SIZE - Search_size
+
+    ; copy the search
+    push rbx ; search to copy from
+    pop rsi
+
+    push rax ; search to copy to
+    pop rdi
+
+    push Search_size
+    pop rcx
+    rep movsb
+    
+    ; rdi now contains game start
+    mov qword [rax + Game.start], rdi
+    mov rsi, qword [rbx + Game.start] ; pointer to copy from
+
+    ; size - upper bits don't matter
+    mov ecx, dword [rbx + Game.end]
+    sub ecx, esi ; upper bits don't matter
+
+    lea rdx, [rdi + rcx] ; end
+    mov qword [rax + Game.end], rdi
+
+    add ecx, Board_size ; required because end is not one past the end
+
+    ; copy the boards
+    rep movsb
+
+    push rax ; stack
+    pop rsi
+
+    mov edi, CLONE_THREAD_SIGHAND_VM ; flags
+    
+    push CLONE_SYSCALL
+    pop rax
+
+    syscall
+    test eax, eax ; least significant byte of a real thread id may be 0
+    jz thread_search
     dec r13d
     jnz .thread_loop_head
 %endif
@@ -321,57 +363,6 @@ search_should_stop_asm:
     seta al ; rest of eax is 0
     ret
 
-
-; rbx - search
-search_create_thread:
-    mov esi, THREAD_STACK_SIZE
-    call mmap
-
-    add rax, THREAD_STACK_SIZE - BOARD_LIST_SIZE
-
-    push rax
-    pop rdi ; board list
-    mov rsi, qword [rbx + Game.start] ; pointer to copy from
-
-    ; size
-    mov rcx, qword [rbx + Game.end]
-    sub rcx, rsi
-
-    push rcx
-    pop rdx ; create copy of end - start
-    add ecx, Board_size ; required because end is not one past the end
-
-    ; copy the board
-    rep movsb
-
-    ; copy the search
-    push rbx ; search to copy from
-    pop rsi
-
-    lea rdi, [rax - Search_size] ; search in child stack
-
-    push Search_size
-    pop rcx
-    rep movsb
-
-    push rax
-    pop rcx ; start of moves
-    mov qword [rax - Search_size + Game.start], rcx
-    add rcx, rdx ; end of moves
-    mov qword [rax - Search_size + Game.end], rcx
-
-    lea rcx, [thread_search]
-    lea rsi, [rax - Search_size - 8] ; stack
-    mov qword [rsi], rcx ; return value for new thread
-
-    mov edi, CLONE_THREAD_SIGHAND_VM ; flags
-    
-    push CLONE_SYSCALL
-    pop rax
-
-    syscall
-    ret
-
 thread_search:
     push rsp
     pop rbx
@@ -387,5 +378,17 @@ thread_search:
 
     mov rdx, qword [rsp + Search.thread_data]
     lock dec byte [rdx] ; decrement thread count
-    jmp _start.quit ; just within 128 bytes
+
+    push EXIT_SYSCALL
+    pop rbx ; save value
+
+    ; unmap stack
+    lea rdi, [rsp - (THREAD_STACK_SIZE - BOARD_LIST_SIZE - Search_size)]
+    mov esi, THREAD_STACK_SIZE
+    push MUNMAP_SYSCALL
+    pop rax
+    syscall
+
+    xchg eax, ebx
+    syscall ; exit
 %endif

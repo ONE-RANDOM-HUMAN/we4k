@@ -103,8 +103,7 @@ insertion_sort:
     ret
 
 flags_numerical:
-    shr esi, 12
-    shr edx, 12
+    or dx, 0FFFh
     cmp esi, edx
     seta al
     ret
