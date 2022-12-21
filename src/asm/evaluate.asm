@@ -8,25 +8,25 @@ DEFAULT rel
 SECTION .rodata
 eval:
 material:
-    dw %( 200,  313)
-    dw %( 608,  620)
-    dw %( 718,  616)
-    dw %(1155, 1235)
-    dw %(2318, 2409)
+    dw %( 211,  286)
+    dw %( 631,  654)
+    dw %( 729,  628)
+    dw %(1189, 1247)
+    dw %(2384, 2383)
 
 mobility:
-    dw %(35, 30)
-    dw %(21, 31)
-    dw %(26, 16)
-    dw %(16,  9)
+    dw %(35, 29)
+    dw %(19, 28)
+    dw %(19, 19)
+    dw %(11, 11)
 
 passed:
-    dw %( 27,  68)
-    dw %( 29,  69)
-    dw %( 40,  95)
-    dw %( 92, 140)
-    dw %(118, 162)
-    dw %(134, 269)
+    dw %(  0,  93)
+    dw %( 16,  50)
+    dw %( 32,  96)
+    dw %(107, 140)
+    dw %(127, 159)
+    dw %(159, 287)
 
 mobility_fns:
     dq knight_moves
@@ -85,16 +85,16 @@ evaluate_asm:
     jz .no_white_pair
     test r10, r9
     jz .no_white_pair
-    add eax, 133
-    add edx, 130
+    add eax, 156
+    add edx, 155
 .no_white_pair:
     and r11, r13 ; black bishops
     test r11, r8
     jz .no_black_pair
     test r11, r9
     jz .no_black_pair
-    sub eax, 133
-    sub edx, 130
+    sub eax, 156
+    sub edx, 155
 .no_black_pair:
 
     ; mobility
@@ -171,8 +171,8 @@ evaluate_asm:
     sub ebx, eax
 
     ; isolated
-    imul ecx, ebx, -60 ; eg
-    imul ebx, ebx, -30 ; mg
+    imul ecx, ebx, -47 ; eg
+    imul ebx, ebx, -31 ; mg
 
     mov rax, r9 ; white southspan
     shr rax, 8
@@ -186,9 +186,9 @@ evaluate_asm:
     sub edx, eax
 
     ; doubled
-    imul eax, edx, -29 ; mg
+    imul eax, edx, -8 ; mg
     add ebx, eax
-    imul eax, edx, -93 ; eg
+    imul eax, edx, -73 ; eg
     add ecx, eax
 
     push rcx ; isolated + doubled eg
@@ -228,8 +228,8 @@ evaluate_asm:
     popcnt rax, rdx
     sub ebx, eax
 
-    imul eax, ebx, -7 ; backward mg
-    imul edx, ebx, -36 ; backward eg
+    imul eax, ebx, -30 ; backward mg
+    imul edx, ebx, -59 ; backward eg
     pop rbx
     pop rcx
 

@@ -10,7 +10,11 @@ cd ../..
 zig build install -Drelease-small -Dcpu=skylake-vzeroupper
 ```
 
-Instructions for actually fitting the binary into 4096 bytes may be coming soon.
+The binary can be made to fit into 4096 bytes using `sstrip`, `vondehi`, and mrbdzz's decompression script.
+`build4k.sh` attempts to do build we4k and pack it into 4096 bytes.
+```
+./build4k.sh wek4
+```
 
 ## Questions
 ### Why is it called we4k?
@@ -30,3 +34,4 @@ After compilation, only one zig function remains after inlining and dead code el
 we4k was developed with contributions from many others. In particular
 * The Stockfish Team - we4k was tuned using a large number Fishtest games.
 * sqrmax - for dedicating a large amount of time to reading the assembly and providing suggestions.
+* mrbdzz - for creating the decompression script used.

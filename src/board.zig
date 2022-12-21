@@ -6,31 +6,13 @@ extern fn board_hash_asm(board: *const Board) callconv(.SysV) u64;
 extern fn board_make_move(board: *Board, move: u16) callconv(.SysV) bool;
 extern fn board_get_piece_asm(board: *const Board, square: u8) callconv(.SysV) u8;
 
-pub const OptionalSquare = extern struct {
-    ep: u8,
-
-    pub fn none() OptionalSquare {
-        return OptionalSquare {
-            .ep = 64,
-        };
-    }
-
-    fn store(self: *OptionalSquare, value: ?Square) void {
-        self.ep = if (value) |square| @enumToInt(square) else 64;
-    }
-
-    fn load(self: OptionalSquare) ?Square {
-        return if (self.ep == 64) null else @intToEnum(Square, self.ep);
-    }
-};
-
 pub const Board = extern struct {
     pieces: [6]u64,
     colors: [2]u64,
     fifty_moves: u8,
     side_to_move: u8,
     castling: u8,
-    ep: OptionalSquare,
+    ep: u8,
 
     // we don't need to care about the full move counter
     pub const STARTPOS = Board {
@@ -49,7 +31,7 @@ pub const Board = extern struct {
             .fifty_moves =  0,
             .side_to_move =  0,
             .castling = 0b1111,
-            .ep = OptionalSquare.none(),
+            .ep = 64
     };
 
     pub inline fn get_piece_unchecked(self: *const Board, sq: Square) Piece {
@@ -71,23 +53,19 @@ pub const Board = extern struct {
         return eql(u64, @ptrCast(*const [8]u64, self), @ptrCast(*const [8]u64, other))
             and self.side_to_move == other.side_to_move
             and self.castling == other.castling
-            and self.ep.ep == other.ep.ep;
+            and self.ep == other.ep;
     }
 
     pub inline fn is_check(self: *const Board) bool {
         return self.is_area_attacked(self.pieces[@enumToInt(Piece.King)] & self.colors[self.side_to_move]);
     }
 
-    pub fn ep_square(self: *const Board) ?Square {
-        return self.ep.load();
+    pub inline fn hash(self: *const Board) u64 {
+        return board_hash_asm(self);
     }
 
     inline fn is_area_attacked(self: *const Board, area: u64) bool {
         return board_is_area_attacked_asm(self, area);
-    }
-
-    pub inline fn hash(self: *const Board) u64 {
-        return board_hash_asm(self);
     }
 };
 
@@ -137,20 +115,8 @@ pub const Move = packed struct {
 
     pub const ZERO = @bitCast(Move, @as(u16, 0));
 
-    pub fn promo_piece(self: Move) ?Piece {
-        if (self.flags & PROMO_FLAG != 0) {
-            return @intToEnum(Piece, (self.flags & 0b11) + 1);
-        } else {
-            return null;
-        }
-    }
-
     pub fn is_noisy(self: Move) bool {
         return self.flags & (CAPTURE_FLAG | PROMO_FLAG) != 0;
-    }
-
-    pub fn is_promo(self: Move) bool {
-        return self.flags & PROMO_FLAG != 0;
     }
 
     pub inline fn eql(lhs: Move, rhs: Move) bool {

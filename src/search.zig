@@ -256,15 +256,15 @@ pub const Search = extern struct {
                     and !self.game.position().is_check() // is check after making the move
                 ) 
                     std.math.min(
-                        (depth_remaining + 2) >> 2,
-                        @intCast(i32, i >> 3) + 1
+                        depth_remaining >> 1,
+                        ((depth_remaining + 1) >> 2) + @intCast(i32, i >> 3)
                     )
                 else 0;                    
 
                 // Principal variation search
                 eval = neg(self.alpha_beta(-alpha - 1, -alpha, depth_remaining - reduction, &kt_out)) catch return NO_EVAL;
 
-                if ((eval > alpha and eval < beta) or (eval >= beta and reduction == 0)) {
+                if ((eval > alpha and eval < beta) or (eval >= beta and reduction != 0)) {
                     eval = neg(self.alpha_beta(-beta, -alpha, depth_remaining, &kt_out)) catch return NO_EVAL;
                 }
             }
