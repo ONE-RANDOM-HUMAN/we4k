@@ -8,25 +8,25 @@ DEFAULT rel
 SECTION .rodata
 eval:
 material:
-    dw %( 200,  256)
-    dw %( 800,  800)
-    dw %( 816,  816)
-    dw %(1344, 1344)
-    dw %(2496, 2496)
+    dw %( 200,  313)
+    dw %( 608,  620)
+    dw %( 718,  616)
+    dw %(1155, 1235)
+    dw %(2318, 2409)
 
 mobility:
-    dw %(32, 32)
-    dw %(16, 32)
-    dw %(16, 16)
-    dw %( 8,  8)
+    dw %(35, 30)
+    dw %(21, 31)
+    dw %(26, 16)
+    dw %(16,  9)
 
 passed:
-    dw %( 32,  64)
-    dw %( 48,  80)
-    dw %( 64,  96)
-    dw %( 80, 112)
-    dw %( 96, 128)
-    dw %(128, 256)
+    dw %( 27,  68)
+    dw %( 29,  69)
+    dw %( 40,  95)
+    dw %( 92, 140)
+    dw %(118, 162)
+    dw %(134, 269)
 
 mobility_fns:
     dq knight_moves
@@ -85,16 +85,16 @@ evaluate_asm:
     jz .no_white_pair
     test r10, r9
     jz .no_white_pair
-    sub eax, -128
-    sub edx, -128
+    add eax, 133
+    add edx, 130
 .no_white_pair:
     and r11, r13 ; black bishops
     test r11, r8
     jz .no_black_pair
     test r11, r9
     jz .no_black_pair
-    add eax, -128
-    add edx, -128
+    sub eax, 133
+    sub edx, 130
 .no_black_pair:
 
     ; mobility
@@ -169,8 +169,10 @@ evaluate_asm:
     or rsi, r11
     call isolated_count
     sub ebx, eax
-    imul ecx, ebx, -64 ; eg
-    imul ebx, ebx, -32 ; mg
+
+    ; isolated
+    imul ecx, ebx, -60 ; eg
+    imul ebx, ebx, -30 ; mg
 
     mov rax, r9 ; white southspan
     shr rax, 8
@@ -182,9 +184,11 @@ evaluate_asm:
     and rax, r13
     popcnt rax, rax
     sub edx, eax
-    imul eax, edx, -32 ; mg
+
+    ; doubled
+    imul eax, edx, -29 ; mg
     add ebx, eax
-    imul eax, edx, -96 ; eg
+    imul eax, edx, -93 ; eg
     add ecx, eax
 
     push rcx ; isolated + doubled eg
@@ -224,8 +228,8 @@ evaluate_asm:
     popcnt rax, rdx
     sub ebx, eax
 
-    imul eax, ebx, 0 ; backward mg
-    imul edx, ebx, -32 ; backward eg
+    imul eax, ebx, -7 ; backward mg
+    imul edx, ebx, -36 ; backward eg
     pop rbx
     pop rcx
 
@@ -308,15 +312,17 @@ side_mobility:
     xor ebx, ebx
 
 .piece_square_loop_head:
-    blsi rdi, r11
+    blsi rdx, r11 ; mobility fns use rdx instead of rdi
     jz .end_piece_square_loop
 
     ; save registers
     push rcx
 
-    ; rdi - square rsi - occ
     ; clobbers rax, rcx, rdx, r8
-    call qword [r15 + mobility_fns - eval + 8 * rcx]
+    xchg rcx, rsi ; mobility fns use rcx instead of rsi
+    ; rdx - square rcx - occ
+    call qword [r15 + mobility_fns - eval + 8 * rsi]
+    xchg rcx, rsi
     pop rcx
 
     ; r9 is preserved

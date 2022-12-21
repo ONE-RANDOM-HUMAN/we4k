@@ -17,6 +17,10 @@ NS_IN_MS equ 1000000
 MAX_EVAL equ 65535
 EVAL_PANIC_MARGIN equ 128
 
+CLONE_THREAD_SIGHAND_VM equ 0x00010900
+WAIT4_SYSCALL equ 61
+CLONE_SYSCALL equ 56
+
 extern search_alpha_beta
 
 SECTION .text
@@ -68,34 +72,20 @@ print_move_asm:
     ret
 
 global search_begin_asm
+
+; args:
+; rbx - search
+; rdx - time
+; rcx - inc
+; clobbers all registers except rbx, rsp and rbp
 search_begin_asm:
-    push rbx
-    push r15
-    push r14
-    push r13
-    push r12
-    
-    
-    push rdi
-    pop rbx ; search
-
-    push rcx
-    pop rax ; inc
-
-    push 16
-    pop rcx
-    add rdi, Search.start_time ; start time for struct
-
-    ; rsi - start time from args
-    rep movsb
-
-    ; stor panicking
+    ; stop panicking
     mov byte [rbx + Search.panicking], 0
     
     ; time management
     ; rdx - time
-    ; rax - inc
-    lea rcx, [rdx + rax] ; rcx - time + inc
+    ; rcx - inc
+    add rcx, rdx ; time + inc
     imul rdi, rdx, NS_IN_MS / 2
     imul rsi, rcx, NS_IN_MS / 30
     cmp rdi, rsi
@@ -108,7 +98,7 @@ search_begin_asm:
     cmova rdi, rsi ; take the minimum
     mov qword [rbx + Search.panic_stop_time], rdi
 
-    sub rsp, 512 + 256 * SearchMove_size
+    sub rsp, 512 + 256 * SearchMove_size + 8 ; for alignment
 
     ; gen moves
     mov rdi, qword [rbx + Game.end] ; board
@@ -165,10 +155,23 @@ search_begin_asm:
     cmp r14, r15
     jne .legal_move_select_loop_head
 
+    test ebp, ebp
+    jz .not_main_thread ; no threads to create
+
     ; r12 number of moves
     cmp r12d, 1
-    jbe .print_and_exit
+    jbe .print_and_exit ; go to end if only 1 legal move on main thread
 
+    ; set up extra threads
+%if EXTRA_THREAD_COUNT > 0
+    mov r13d, EXTRA_THREAD_COUNT
+.thread_loop_head:
+    call search_create_thread
+    dec r13d
+    jnz .thread_loop_head
+%endif
+
+.not_main_thread:
     push 1
     pop r14 ; depth
 .iterative_deepening_loop_head:
@@ -208,7 +211,6 @@ search_begin_asm:
     pop rdi ; kt
     pop rdx ; last best
 
-    ; pop rsi
     sub qword [rbx + Game.end], Board_size ; unmake move
     
     neg eax
@@ -236,6 +238,16 @@ search_begin_asm:
     inc r14d
     jmp .iterative_deepening_loop_head
 .iterative_deepening_loop_end:
+    test ebp, ebp
+    jz .exit ; not main thread
+
+%if EXTRA_THREAD_COUNT > 0
+    ; stop other threads now
+    or byte [rbx + Search_size], 0b1000_0000 ; thread data guaranteed to be there for main thread
+.wait_loop_head:
+    cmp byte [rbx + Search_size], 0b1000_0000  ; wait for threads to finish
+    ja .wait_loop_head
+%endif
     ; sort the moves
     push rsp ; pointer
     pop rdi
@@ -245,13 +257,8 @@ search_begin_asm:
 .print_and_exit:
     mov edi, dword [rsp + SearchMove.move] ; the high bits can be anything
     call print_move_asm
-
-    add rsp, 512 + 256 * SearchMove_size
-    pop r12
-    pop r13
-    pop r14
-    pop r15
-    pop rbx
+.exit:
+    add rsp, 512 + 256 * SearchMove_size + 8
     ret
 
 search_moves_sort:
@@ -280,6 +287,12 @@ search_moves_sort:
 
 global search_should_stop_asm
 search_should_stop_asm:
+    mov rdx, qword [rdi + Search.thread_data]
+    cmp byte [rdx], 1000_0000b
+
+    ; will be above since extra thread count > 0
+    ja .end ; seta will return true
+
     push rdi ; save pointer
     pop rdx
     
@@ -304,7 +317,75 @@ search_should_stop_asm:
 
     movzx eax, byte [rdx + Search.panicking]
     cmp rcx, qword [rdx + Search.stop_time + rax * 8]
+.end:
     seta al ; rest of eax is 0
     ret
 
+
+; rbx - search
+search_create_thread:
+    mov esi, THREAD_STACK_SIZE
+    call mmap
+
+    add rax, THREAD_STACK_SIZE - BOARD_LIST_SIZE
+
+    push rax
+    pop rdi ; board list
+    mov rsi, qword [rbx + Game.start] ; pointer to copy from
+
+    ; size
+    mov rcx, qword [rbx + Game.end]
+    sub rcx, rsi
+
+    push rcx
+    pop rdx ; create copy of end - start
+    add ecx, Board_size ; required because end is not one past the end
+
+    ; copy the board
+    rep movsb
+
+    ; copy the search
+    push rbx ; search to copy from
+    pop rsi
+
+    lea rdi, [rax - Search_size] ; search in child stack
+
+    push Search_size
+    pop rcx
+    rep movsb
+
+    push rax
+    pop rcx ; start of moves
+    mov qword [rax - Search_size + Game.start], rcx
+    add rcx, rdx ; end of moves
+    mov qword [rax - Search_size + Game.end], rcx
+
+    lea rcx, [thread_search]
+    lea rsi, [rax - Search_size - 8] ; stack
+    mov qword [rsi], rcx ; return value for new thread
+
+    mov edi, CLONE_THREAD_SIGHAND_VM ; flags
+    
+    push CLONE_SYSCALL
+    pop rax
+
+    syscall
+    ret
+
+thread_search:
+    push rsp
+    pop rbx
+
+    ; time - the overflow won't matter because the multiplies are signed
+    push -1
+    pop rdx
+
+    xor ecx, ecx ; inc
+
+    xor ebp, ebp ; no threads
+    call search_begin_asm
+
+    mov rdx, qword [rsp + Search.thread_data]
+    lock dec byte [rdx] ; decrement thread count
+    jmp _start.quit ; just within 128 bytes
 %endif

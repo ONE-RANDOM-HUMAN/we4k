@@ -166,7 +166,7 @@ gen_pseudo_legal_asm:
     mov rdx, r8
     and rdx, qword[rdi + Board.king]
 
-    call king_moves.local
+    call king_moves
 
     ; exclude own pieces
     ; rax - king moves
@@ -213,19 +213,19 @@ gen_pseudo_legal_asm:
     ; other pieces
     ; knight
     mov r10, qword [rdi + Board.knight]
-    lea r11, [knight_moves.local]
+    lea r11, [knight_moves]
     call gen_piece
 
     ; bishop like
     mov r10, qword [rdi + Board.bishop]
     or r10, qword [rdi + Board.queen]
-    lea r11, [bishop_moves.local]
+    add r11, bishop_moves - knight_moves
     call gen_piece
 
     ; rook like
     mov r10, qword [rdi + Board.rook]
     or r10, qword [rdi + Board.queen]
-    lea r11, [rook_moves.local]
+    add r11, rook_moves - bishop_moves
     call gen_piece
 
     mov rax, rsi
@@ -318,10 +318,8 @@ serialise:
 .end:
     ret
 
-global king_moves
+; rdx - king positions
 king_moves:
-    mov rdx, rdi ; system v 
-.local:
     mov r10, qword [not_a_file]
     mov rcx, rdx
 
@@ -345,15 +343,9 @@ king_moves:
 
     ret
 
-; ignore rdi and rsi
-global knight_moves
-global knight_moves_occ
-knight_moves_occ:
+; rdx - knight positions
 knight_moves:
-    mov rdx, rdi
-.local:
     vmovq xmm0, rdx
-    ; vpermq ymm0, ymm0, 0
     vpbroadcastq ymm0, xmm0
     vmovdqu ymm1, yword [knight_shifts]
     vmovdqu ymm2, yword [not_a_file]
@@ -372,29 +364,22 @@ knight_moves:
     or rax, rdx
     ret
 
-global queen_moves
+; rdx - queen positions
+; rcx - occ
 queen_moves:
-    call bishop_moves ; bishop moves will put the values in rdx and rcx
-    ; which are then preserved
+    ; preserves rdx, rcx
+    call bishop_moves
     mov r8, rax ; r8 is preserved
-    call rook_moves.local
+    call rook_moves
     or rax, r8
     ret
 
-global bishop_moves
 bishop_moves:
-    mov rdx, rdi
-    mov rcx, rsi
-.local:
     vmovdqu xmm0, [bishop_shifts]
     vmovdqu xmm1, [not_a_file]
     jmp dumb7fill
 
-global rook_moves
 rook_moves:
-    mov rdx, rdi
-    mov rcx, rsi
-.local:
     vmovdqu xmm0, [rook_shifts]
     vmovdqu xmm1, [all_mask]
     ; jmp dumb7fill not necessary because dumb7fill is already next

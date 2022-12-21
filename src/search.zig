@@ -33,6 +33,7 @@ pub const Search = extern struct {
     panicking: bool,
     nodes: u64,
     tt: tt.TT,
+    thread_data: *u8,
 
     pub fn new() Search {
         return Search {
@@ -154,14 +155,13 @@ pub const Search = extern struct {
             return if (is_check) evaluate.MIN_EVAL else 0;
         }
 
-        if (self.game.position().fifty_moves >= 100) {
-            // find a legal move
-            for (moves) |move| {
-                if (self.game.make_move(move)) {
-                    self.game.unmake_move();
-                    return 0;
-                }
-            }
+
+        // require 101 plies if in check to prevent blundering
+        // into mate in 1 on 100th ply
+        if (self.game.position().fifty_moves >= 101 // this is the smallest
+            or (!is_check and self.game.position().fifty_moves >= 100)
+        ) {
+            return 0;
         }
 
         var depth_remaining: i32 = undefined;
@@ -255,7 +255,10 @@ pub const Search = extern struct {
                     and !is_check
                     and !self.game.position().is_check() // is check after making the move
                 ) 
-                    depth_remaining >> 2
+                    std.math.min(
+                        (depth_remaining + 2) >> 2,
+                        @intCast(i32, i >> 3) + 1
+                    )
                 else 0;                    
 
                 // Principal variation search

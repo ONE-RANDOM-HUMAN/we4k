@@ -11,7 +11,7 @@ pub fn build(b: *std.build.Builder) void {
 
     const asm_ = b.addObject("asm", "src/asm/combined.o");
 
-    const exe = b.addExecutable("4kengine", "src/main.zig");
+    const exe = b.addExecutable("we4k", "src/main.zig");
     exe.setTarget(target);
     exe.setBuildMode(mode);
     exe.want_lto = true;

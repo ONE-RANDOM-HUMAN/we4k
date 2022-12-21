@@ -1,6 +1,5 @@
-%ifndef STRUCTS_ASM
-%define STRUCTS_ASM
-
+%ifndef COMMON_ASM
+%define COMMON_ASM
 struc Board
     alignb 8
     .pieces:
@@ -58,6 +57,8 @@ struc Search
         resq 1
     .tt:
         resq 1
+    .thread_data:
+        resb 1 ; top bit is should stop, rest is thread count
     alignb 8
 endstruc
 
@@ -89,4 +90,34 @@ PIECE_BISHOP equ 2
 PIECE_ROOK equ 3
 PIECE_QUEEN equ 4
 PIECE_KING equ 5
+
+EXTRA_THREAD_COUNT equ 3
+BOARD_LIST_SIZE equ Board_size * 4096
+THREAD_STACK_SIZE equ 5 * 1024 * 1024
+
+PROT_READ_OR_WRITE equ 3
+MAP_PRIVATE_ANONYMOUS equ 22h
+
+MMAP_SYSCALL equ 9
+EXIT_SYSCALL equ 60
+
+DEFAULT rel
+SECTION .text
+
+; size - esi
+mmap:
+    push MMAP_SYSCALL
+    pop rax
+
+    xor edi, edi
+    push PROT_READ_OR_WRITE
+    pop rdx
+    push MAP_PRIVATE_ANONYMOUS
+    pop r10
+    push -1
+    pop r8
+    xor r9d, r9d
+    syscall
+    ret
+
 %endif

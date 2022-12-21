@@ -3,7 +3,7 @@ const std = @import("std");
 const linux = std.os.linux;
 
 const TT_SIZE_BYTES: usize = 32 * 1024 * 1024;
-const TT_SIZE: usize = TT_SIZE_BYTES / @sizeOf(TTEntry);
+const TT_SIZE: usize = TT_SIZE_BYTES / @sizeOf(u64);
 
 pub const TTData = packed struct {
     best_move: board.Move,
@@ -43,12 +43,8 @@ comptime {
     std.debug.assert(@sizeOf(TTData) == 8);
 }
 
-pub const TTEntry = extern struct {
-    data: u64,
-};
-
 pub const TT = extern struct {
-    entries: *[TT_SIZE]TTEntry,
+    entries: *[TT_SIZE]u64,
 
     pub fn new() TT {
         const ptr = std.os.linux.mmap(
@@ -62,21 +58,19 @@ pub const TT = extern struct {
 
         // memory zeroed by MAP_ANONYMOUS
         return TT {
-            .entries = @intToPtr(*[TT_SIZE]TTEntry, ptr),
+            .entries = @intToPtr(*[TT_SIZE]u64, ptr),
         };
     }
 
     pub fn clear(self: *TT) void {
-        std.mem.set(TTEntry, self.entries, TTEntry {
-            .data = 0,
-        });
+        std.mem.set(u64, self.entries, 0);
     }
 
     pub fn load(self: *const TT, position: *const board.Board) TTData {
         const hash = position.hash();
         const index = hash & (TT_SIZE - 1);
 
-        const data = @bitCast(TTData, self.entries[index].data);
+        const data = @bitCast(TTData, @atomicLoad(u64, &self.entries[index], .Unordered));
         if (data.hash == hash >> 48) {
             return data;
         } else {
@@ -89,6 +83,6 @@ pub const TT = extern struct {
         const index = hash & (TT_SIZE - 1);
 
         const data = TTData.new(best_move, eval, node_type, depth, hash);
-        self.entries[index].data = @bitCast(u64, data);
+        @atomicStore(u64, &self.entries[index], @bitCast(u64, data), .Unordered);
     }
 };

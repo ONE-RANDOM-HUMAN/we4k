@@ -52,7 +52,7 @@ board_is_area_attacked_asm:
     mov rcx, qword [rdi + Board.white]
     or rcx, qword [rdi + Board.black]
 
-    call bishop_moves.local
+    call bishop_moves
     or r9, rax
 
     ; rook like
@@ -60,17 +60,17 @@ board_is_area_attacked_asm:
     or rdx, qword [rdi + Board.queen]
     and rdx, r8
 
-    call rook_moves.local
+    call rook_moves
     or r9, rax
 
     mov rdx, qword [rdi + Board.knight]
     and rdx, r8
-    call knight_moves.local
+    call knight_moves
     or r9, rax
 
     mov rdx, qword [rdi + Board.king]
     and rdx, r8
-    call king_moves.local
+    call king_moves
     or r9, rax
 
     xor eax, eax

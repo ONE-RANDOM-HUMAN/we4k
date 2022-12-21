@@ -22,44 +22,28 @@ startpos_piece_placement:
 CLOCK_GETTIME equ 228
 CLOCK_MONOTONIC equ 1
 
-MMAP equ 9
-EXIT equ 60
 
 TT_SIZE equ 32 * 1048576 ; update together with value in tt.rs
-PROT_READ_OR_WRITE equ 3
-MAP_PRIVATE_ANONYMOUS equ 22h
-BOARD_LIST_SIZE equ Board_size * 4096
-
 SECTION .text
 
 global _start
 _start:
-    ; push rbx ; no need to save registers
-
     ; set up search
-    push MMAP
-    pop rax
+    push 0
+    push rsp ; stop now
 
-    xor edi, edi
-    mov rsi, TT_SIZE ; usi rsi for large tt
-    push PROT_READ_OR_WRITE
-    pop rdx
-    push MAP_PRIVATE_ANONYMOUS
-    pop r10
-    push -1
-    pop r8
-    xor r9d, r9d
-    syscall
+    mov rsi, TT_SIZE ; using rsi for large tt
+    call mmap
     push rax ; tt
 
     ; add 6 qwords of 0
     push 6
     pop rcx
 .gsearch_push_head:
-    push 0 ; nodes
+    push 0
     loop .gsearch_push_head
 
-    push MMAP
+    push MMAP_SYSCALL
     pop rax
     
     mov esi, BOARD_LIST_SIZE
@@ -67,12 +51,14 @@ _start:
     
     push rax
     push rax
-    mov rbx, rsp
-    sub rsp, 512 + 8 ; for alignment
+    push rsp
+    pop rbx
+    sub rsp, 512 + 8
 
     push rax
     pop rdi
     lea rsi, [startpos_piece_placement]
+
     push Board_size
     pop rcx
     rep movsb
@@ -94,14 +80,13 @@ _start:
     ja .u
 
     ; quit
-    ; behave nicely for now
+    ; behave nicely for now and don't leave 'uit'
     mov dl, `\n`
     call read_until
 
     ; no need to fix stack
-
-    ; call exit
-    push 60
+.quit:
+    push EXIT_SYSCALL
     pop rax
     xor edi, edi
 
@@ -111,7 +96,6 @@ _start:
     call write8
     jmp .read_until_newline_end
 .u:
-    ; mov rdi, rbx
     ; zero hash
     mov rdi, qword [rbx + Search.tt]
     xor eax, eax
@@ -125,9 +109,7 @@ _start:
     mov eax, CLOCK_GETTIME
     push CLOCK_MONOTONIC
     pop rdi
-    ; mov rsi, rsp
-    push rsp
-    pop rsi
+    lea rsi, [rbx + Search.start_time] ; read directly into search
     syscall
 
     ; set dl to letter for side to move
@@ -146,10 +128,7 @@ _start:
     ; ignore 'time '
     push 5
     pop rdx
-    call read
-
-    ; rdi - time in ms - starts at 0 from previous syscall
-    call parse_num
+    call read_parse_num
 
     pop rdx ; stack contains side to move
     push rdi ; time
@@ -158,10 +137,9 @@ _start:
     ; 'inc '
     push 4
     pop rdx
-    call read
 
-    ; rdi - inc in ms - starts at 0 from previous syscall
-    call parse_num
+    call read_parse_num
+
     push rdi ; inc
     cmp al, `\n`
     je .g_parse_inc_end
@@ -170,15 +148,21 @@ _start:
     call read_until
 .g_parse_inc_end:
     ; call search
+
+    ; don't stop now + set thread count
+    mov byte [rbx + Search_size], EXTRA_THREAD_COUNT
+
+    ; indicate main thread
+    push 1
+    pop rbp
+
     pop rcx ; inc
     pop rdx ; time
 
-    push rsp
-    pop rsi
 
-    push rbx
-    pop rdi
-
+    ; rbx - search
+    ; rdx - time
+    ; rcx - inc
     call search_begin_asm
     jmp .loop_head
 .p:
@@ -207,26 +191,23 @@ _start:
     ; origin and dest squares in ax
     sub eax, 'a1a1'
     mov ecx, 07070707h
-    pext eax, eax, ecx
+    pext ebp, eax, ecx
 
     push rsp
     pop rsi
-    push rsi
-    push rax
     mov rdi, qword[rbx]
     call gen_pseudo_legal_asm
 
-    pop rax ; ax - origin and dest squares
-    pop rsi ; rsi - move buffer
+    xor eax, eax
 .p_find_move_loop_head:
-    movzx edx, word [rsi] ; move from movegen
+    movzx edx, word [rsp + 2*rax] ; move from movegen
     mov ecx, edx
     and ch, 0000_1111b ; mask off bits
-    cmp ecx, eax ; check that the squares match
-    je .p_move_found
-    add rsi, 2
-    jmp .p_find_move_loop_head ; assume move will be found
-.p_move_found:
+    inc eax
+    cmp ecx, ebp ; check that the squares match
+    jne .p_find_move_loop_head ; assume move will be found
+    
+    ; move found
     test dh, PROMO_FLAG << 4
     jz .p_no_promo
 
@@ -280,6 +261,7 @@ read_char:
     ; no need to jump because read is next
 
     ; jmp read
+
 ; len: rdx, up to 16 bytes
 ; read up to 16 bytes into rdx:rax
 ; rest of the bytes are zeroed
@@ -290,7 +272,6 @@ read:
     push rax
 
     xor edi, edi
-    ; mov rsi, rsp
     push rsp
     pop rsi
 
@@ -299,9 +280,11 @@ read:
     pop rdx
     ret
 
-; accumulates to rdi
+; reads rdx characters, then parses number into rdi
 ; next char in al
-parse_num:
+read_parse_num:
+    call read
+    ; rdi = 0 from read
 .loop_head:
     push rdi
     call read_char
@@ -330,7 +313,6 @@ write8:
     mov edi, eax
 
     ; pointer
-    ; mov rsi, rsp
     push rsp
     pop rsi
 
