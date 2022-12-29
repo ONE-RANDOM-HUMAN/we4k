@@ -1,4 +1,5 @@
 # we4k
+![logo](logo.png)
 we4k is a chess engine designed to fit into 4096 bytes.
 
 ## Building
@@ -13,7 +14,7 @@ zig build install -Drelease-small -Dcpu=skylake-vzeroupper
 The binary can be made to fit into 4096 bytes using `sstrip`, `vondehi`, and mrbdzz's decompression script.
 `build4k.sh` attempts to do build we4k and pack it into 4096 bytes.
 ```
-./build4k.sh wek4
+./build4k.sh we4k
 ```
 
 ## Questions
@@ -35,3 +36,4 @@ we4k was developed with contributions from many others. In particular
 * The Stockfish Team - we4k was tuned using a large number Fishtest games.
 * sqrmax - for dedicating a large amount of time to reading the assembly and providing suggestions.
 * mrbdzz - for creating the decompression script used.
+* kanchess - for creating and donating the logo
