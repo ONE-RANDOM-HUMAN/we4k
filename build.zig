@@ -7,13 +7,22 @@ pub fn build(b: *std.build.Builder) void {
     // for restricting supported target set are available.
     const target = b.standardTargetOptions(.{});
 
-    const mode = b.standardReleaseOptions();
+    const optimise = b.standardOptimizeOption(.{});
 
-    const asm_ = b.addObject("asm", "src/asm/combined.o");
+    const asm_ = b.addObject(.{
+    	.name = "asm",
+    	.root_source_file = .{ .path = "src/asm/combined.o" },
+    	.target = target,
+    	.optimize = optimise,
+    });
 
-    const exe = b.addExecutable("we4k", "src/main.zig");
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    const exe = b.addExecutable(.{
+    	.name = "we4k",
+    	.root_source_file = .{ .path = "src/main.zig" },
+    	.target = target,
+    	.optimize = optimise,
+    });
+
     exe.want_lto = true;
     exe.addObject(asm_);
     exe.install();
@@ -27,9 +36,13 @@ pub fn build(b: *std.build.Builder) void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    const exe_tests = b.addTest("src/main.zig");
-    exe_tests.setTarget(target);
-    exe_tests.setBuildMode(mode);
+    const exe_tests = b.addTest(.{
+    	.name = "we4k",
+    	.root_source_file = .{ .path = "src/main.zig" },
+    	.target = target,
+    	.optimize = optimise,
+    });
+    exe_tests.optimize = optimise;
     exe_tests.addObject(asm_);
 
     const test_step = b.step("test", "Run unit tests");

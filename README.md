@@ -1,4 +1,5 @@
 # we4k
+## we4k is no longer in development. New development is focused on [STRO4K](https://github.com/ONE-RANDOM-HUMAN/STRO4K)
 ![logo](logo.png)
 we4k is a chess engine designed to fit into 4096 bytes.
 

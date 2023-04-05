@@ -11,7 +11,7 @@ pub fn order_quiet_moves(_moves: []board.Move, position: *const board.Board, kt:
     var i: usize = 0;
     var moves = _moves;
     while (i < 4 and kt.killers[i] != 0) : (i += 1) {
-        const index = for (moves) |move, index| {
+        const index = for (moves, 0..) |move, index| {
             if (move.eql(@bitCast(board.Move, kt.killers[i]))) break index;
         } else continue;
 
@@ -23,13 +23,10 @@ pub fn order_quiet_moves(_moves: []board.Move, position: *const board.Board, kt:
     _ = position;
 }
 
-
 pub const KillerTable = extern struct {
     killers: [4]u16,
 
-    pub const EMPTY = KillerTable {
-        .killers = [4]u16 { 0, 0, 0, 0 }
-    };
+    pub const EMPTY = KillerTable{ .killers = [4]u16{ 0, 0, 0, 0 } };
 
     pub fn beta_cutoff(self: *KillerTable, move: board.Move) void {
         const value = @bitCast(u16, move);

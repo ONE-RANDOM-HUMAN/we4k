@@ -3,7 +3,7 @@ T=`mktemp`
 cd src/asm
 nasm -f elf64 combined.asm
 cd ../..
-zig build install -Drelease-small -Dcpu=skylake-vzeroupper
+zig build install -Doptimize=ReleaseSmall -Dcpu=skylake-vzeroupper
 git clone https://github.com/aunali1/super-strip
 cd super-strip
 make

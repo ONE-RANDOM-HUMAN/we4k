@@ -36,7 +36,7 @@ pub const Search = extern struct {
     thread_data: *u8,
 
     pub fn new() Search {
-        return Search {
+        return Search{
             .game = game.Game.new(),
             .start = undefined,
             .stop_time = 0,
@@ -68,7 +68,6 @@ pub const Search = extern struct {
         // to determine when to check time.
         // self.nodes = 0;
 
-
         var buffer: [256]board.Move = undefined;
         const pseudo_moves = movegen.gen_pseudo_legal(self.game.position(), &buffer);
 
@@ -80,7 +79,7 @@ pub const Search = extern struct {
 
                 // It does not matter if this gives NO_EVAL
                 var kt_out = moveorder.KillerTable.EMPTY;
-                move_buffer[curr_move].eval = -%self.alpha_beta(-evaluate.MAX_EVAL, -evaluate.MIN_EVAL, -1, &kt_out); 
+                move_buffer[curr_move].eval = -%self.alpha_beta(-evaluate.MAX_EVAL, -evaluate.MIN_EVAL, -1, &kt_out);
                 self.game.unmake_move();
                 curr_move += 1;
             }
@@ -92,7 +91,6 @@ pub const Search = extern struct {
             Search.print_move(moves[0].move);
             return;
         }
-
 
         var depth: u32 = 2;
         var searched: usize = undefined;
@@ -115,7 +113,7 @@ pub const Search = extern struct {
 
             var alpha = evaluate.MIN_EVAL;
             var kt_out = moveorder.KillerTable.EMPTY;
-            
+
             for (moves) |*move| {
                 _ = self.game.make_move(move.move);
                 defer self.game.unmake_move();
@@ -128,7 +126,6 @@ pub const Search = extern struct {
                 self.panicking = depth >= 5 and alpha <= last_best - EVAL_PANIC_MARGIN;
                 searched += 1;
             }
-
         }
 
         std.sort.insertionSort(SearchMove, moves[0..searched], {}, SearchMove.sort_fn);
@@ -155,7 +152,6 @@ pub const Search = extern struct {
             return if (is_check) evaluate.MIN_EVAL else 0;
         }
 
-
         // require 101 plies if in check to prevent blundering
         // into mate in 1 on 100th ply
         if (self.game.position().fifty_moves >= 101 // this is the smallest
@@ -180,7 +176,7 @@ pub const Search = extern struct {
         if (!quiescence) {
             const tt_entry = self.tt.load(self.game.position());
             if (!tt_entry.is_zero()) {
-                const move_index = for (moves) |move, index| {
+                const move_index = for (moves, 0..) |move, index| {
                     if (move.eql(tt_entry.best_move)) break index;
                 } else null;
 
@@ -203,13 +199,12 @@ pub const Search = extern struct {
             }
         }
 
-
         ordered += moveorder.order_noisy_moves(moves[ordered..], self.game.position());
 
         // NMP
         var alpha = _alpha;
         var best_eval = evaluate.MIN_EVAL - 1;
-        var best_move =  board.Move.ZERO;
+        var best_move = board.Move.ZERO;
         var node_type: u2 = ALL_NODE;
 
         if (quiescence) {
@@ -269,11 +264,10 @@ pub const Search = extern struct {
                 }
             }
 
-
             if (eval > best_eval) {
                 best_eval = eval;
                 best_move = move;
-                
+
                 if (eval > alpha) {
                     alpha = eval;
 
@@ -316,7 +310,6 @@ pub const Search = extern struct {
         print_move_asm(@bitCast(u16, move));
     }
 };
-
 
 const SearchMove = struct {
     eval: i32,

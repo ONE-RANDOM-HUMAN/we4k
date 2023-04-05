@@ -23,7 +23,7 @@ CLOCK_GETTIME equ 228
 CLOCK_MONOTONIC equ 1
 
 
-TT_SIZE equ 32 * 1048576 ; update together with value in tt.rs
+TT_SIZE equ 32 * 1048576 ; update together with value in tt.zig
 SECTION .text
 
 global _start
