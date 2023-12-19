@@ -35,29 +35,29 @@ pub const Board = extern struct {
     };
 
     pub inline fn get_piece_unchecked(self: *const Board, sq: Square) Piece {
-        return @intToEnum(Piece, board_get_piece_asm(self, @enumToInt(sq)));
+        return @enumFromInt(board_get_piece_asm(self, @intFromEnum(sq)));
     }
 
     pub inline fn get_piece_index(self: *const Board, sq: Square) u8 {
         // somehow it is slightly smaller when not inline
-        return board_get_piece_asm(self, @enumToInt(sq));
+        return board_get_piece_asm(self, @intFromEnum(sq));
     }
 
     pub inline fn make_move(self: *Board, move: Move) bool {
-        return board_make_move(self, @bitCast(u16, move));
+        return board_make_move(self, @bitCast(move));
     }
 
     pub fn repetition_eq(self: *const Board, other: *const Board) bool {
         const eql = @import("std").mem.eql;
 
-        return eql(u64, @ptrCast(*const [8]u64, self), @ptrCast(*const [8]u64, other))
+        return eql(u64, @as(*const [8]u64, @ptrCast(self)), @as(*const [8]u64, @ptrCast(other)))
             and self.side_to_move == other.side_to_move
             and self.castling == other.castling
             and self.ep == other.ep;
     }
 
     pub inline fn is_check(self: *const Board) bool {
-        return self.is_area_attacked(self.pieces[@enumToInt(Piece.King)] & self.colors[self.side_to_move]);
+        return self.is_area_attacked(self.pieces[@intFromEnum(Piece.King)] & self.colors[self.side_to_move]);
     }
 
     pub inline fn hash(self: *const Board) u64 {
@@ -80,11 +80,11 @@ pub const Square = enum(u6) {
     A8, B8, C8, D8, E8, F8, G8, H8,
 
     pub fn to_bb(self: Square) u64 {
-        return @as(u64, 1) << @enumToInt(self);
+        return @as(u64, 1) << @intFromEnum(self);
     }
 
     pub fn offset(self: Square, off: i8) Square {
-        return @intToEnum(Square, @as(i8, @enumToInt(self)) + off);
+        return @enumFromInt(@as(i8, @intFromEnum(self)) + off);
     }
 };
 
@@ -113,13 +113,13 @@ pub const Move = packed struct {
     destination: Square,
     flags: u4,
 
-    pub const ZERO = @bitCast(Move, @as(u16, 0));
+    pub const ZERO: Move = @bitCast(@as(u16, 0));
 
     pub fn is_noisy(self: Move) bool {
         return self.flags & (CAPTURE_FLAG | PROMO_FLAG) != 0;
     }
 
     pub inline fn eql(lhs: Move, rhs: Move) bool {
-        return @bitCast(u16, lhs) == @bitCast(u16, rhs);
+        return @as(u16, @bitCast(lhs)) == @as(u16, @bitCast(rhs));
     }
 };

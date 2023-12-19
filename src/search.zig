@@ -8,7 +8,7 @@ const evaluate = @import("evaluate.zig");
 
 const linux = std.os.linux;
 
-const NO_EVAL = @truncate(i32, 0x8000_0000);
+const NO_EVAL: i32 = @truncate(0x8000_0000);
 
 extern fn print_move_asm(move: u16) callconv(.SysV) void;
 extern fn search_should_stop_asm(self: *const Search) callconv(.SysV) bool;
@@ -118,7 +118,7 @@ pub const Search = extern struct {
                 _ = self.game.make_move(move.move);
                 defer self.game.unmake_move();
 
-                const score = neg(self.alpha_beta(-beta, -alpha, @intCast(i32, depth - 1), &kt_out)) catch break :loop;
+                const score = neg(self.alpha_beta(-beta, -alpha, @intCast(depth - 1), &kt_out)) catch break :loop;
 
                 move.eval = score;
                 alpha = std.math.max(alpha, score);
@@ -250,9 +250,9 @@ pub const Search = extern struct {
                     and !is_check
                     and !self.game.position().is_check() // is check after making the move
                 ) 
-                    std.math.min(
+                    @min(
                         depth_remaining >> 1,
-                        ((depth_remaining + 1) >> 2) + @intCast(i32, i >> 3)
+                        ((depth_remaining + 1) >> 2) + @as(i32, @intCast(i >> 3))
                     )
                 else 0;                    
 
@@ -292,7 +292,7 @@ pub const Search = extern struct {
                     best_move,
                     best_eval,
                     node_type,
-                    @intCast(u32, depth_remaining),
+                    @intCast(depth_remaining),
                 );
             }
             return best_eval;
@@ -307,7 +307,7 @@ pub const Search = extern struct {
     }
 
     inline fn print_move(move: board.Move) void {
-        print_move_asm(@bitCast(u16, move));
+        print_move_asm(@bitCast(move));
     }
 };
 

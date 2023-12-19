@@ -8,6 +8,6 @@ pub inline fn gen_pseudo_legal(position: *const board.Board, buffer: *[256]board
     const start: [*]board.Move = buffer;
     const end = gen_pseudo_legal_asm(position, start);
 
-    const len = (@ptrToInt(end) - @ptrToInt(start)) / @sizeOf(board.Move);
+    const len = (@intFromPtr(end) - @intFromPtr(start)) / @sizeOf(board.Move);
     return buffer[0..len];
 }

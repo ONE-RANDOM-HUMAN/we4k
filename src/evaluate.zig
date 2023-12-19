@@ -25,10 +25,10 @@ pub fn evaluate(position: *const board.Board) i32 {
 }
 
 fn resolve(position: *const board.Board, eval: Eval) i32 {
-    const phase = popcnt(position.pieces[@enumToInt(board.Piece.Knight)])
-        + popcnt(position.pieces[@enumToInt(board.Piece.Bishop)])
-        + 2 * popcnt(position.pieces[@enumToInt(board.Piece.Rook)])
-        + 4 * popcnt(position.pieces[@enumToInt(board.Piece.Queen)]);
+    const phase = popcnt(position.pieces[@intFromEnum(board.Piece.Knight)])
+        + popcnt(position.pieces[@intFromEnum(board.Piece.Bishop)])
+        + 2 * popcnt(position.pieces[@intFromEnum(board.Piece.Rook)])
+        + 4 * popcnt(position.pieces[@intFromEnum(board.Piece.Queen)]);
 
     return @divTrunc(phase * @as(i32, eval.mg) + (24 - phase) * @as(i32, eval.eg), 24);
 }

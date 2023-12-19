@@ -22,7 +22,7 @@ pub const Game = extern struct {
         );
 
         // buffer
-        const ptr = @intToPtr([*]board.Board, buffer);
+        const ptr: [*]board.Board = @ptrFromInt(buffer);
         ptr[0] = board.Board.STARTPOS;
         return Game {
             .end = ptr,
@@ -40,7 +40,7 @@ pub const Game = extern struct {
     }
 
     pub inline fn make_move(self: *Game, move: board.Move) bool {
-        return game_make_move(self, @bitCast(u16, move));
+        return game_make_move(self, @bitCast(move));
     }
 
     pub fn unmake_move(self: *Game) void {

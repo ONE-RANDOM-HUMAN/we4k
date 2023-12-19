@@ -4,7 +4,7 @@
 we4k is a chess engine designed to fit into 4096 bytes.
 
 ## Building
-we4k requires nasm and the latest zig compiler. Only Linux and cpus with AVX2 and BMI2 are supported.
+we4k requires nasm and the latest Zig compiler. Only Linux and cpus with AVX2 and BMI2 are supported.
 ```
 cd src/asm
 nasm -f elf64 combined.asm
@@ -12,8 +12,8 @@ cd ../..
 zig build install -Drelease-small -Dcpu=skylake-vzeroupper
 ```
 
-The binary can be made to fit into 4096 bytes using `sstrip`, `vondehi`, and mrbdzz's decompression script.
-`build4k.sh` attempts to do build we4k and pack it into 4096 bytes.
+The binary could be made to fit into 4096 bytes using `sstrip`, `vondehi`, and mrbdzz's decompression script. However, this is no longer possible with newer versions of the Zig compiler.
+`build4k.sh` attempts to build we4k and pack it into 4096 bytes.
 ```
 ./build4k.sh we4k
 ```
@@ -29,8 +29,8 @@ Elo difference: -552.1 +/- 257.1, LOS: 0.0 %, DrawRatio: 2.0 %
 Finished match
 ```
 
-### Where was there claimed to be only one zig function?
-After compilation, only one zig function remains after inlining and dead code elimination.
+### Where was there claimed to be only one Zig function?
+After compilation, only one Zig function remains after inlining and dead code elimination.
 
 ## Thanks
 we4k was developed with contributions from many others. In particular
